@@ -5,29 +5,28 @@ import mongoose from "mongoose";
 export const getAllPosts = async (req, res) => {
   try {
     const posts = await Post.find()
-    .populate("authorId", "username email profilePicture")
-    .sort({ createdAt: -1 });
-  
-  const postsWithCommentCount = await Promise.all(
-    posts.map(async (post) => {
-      // Her post için Comment koleksiyonunda eşleşen postId ile yorum sayısını alıyoruz
-      const commentCount = await Comment.countDocuments({ postId: post._id });
-  
-      return {
-        id: post._id,
-        authorId: post.authorId._id,
-        userName: post.authorId.username,
-        userEmail: post.authorId.email,
-        userProfilePic: post.authorId.profilePicture,
-        content: post.content,
-        commentsCount: commentCount, 
-        likesCount: post.likes?.length || 0,
-        date: post.createdAt,
-      };
-    })
-  );
-  res.status(200).json(postsWithCommentCount);
-  
+      .populate("authorId", "username email profilePicture")
+      .sort({ createdAt: -1 });
+
+    const postsWithCommentCount = await Promise.all(
+      posts.map(async (post) => {
+        // Her post için Comment koleksiyonunda eşleşen postId ile yorum sayısını alıyoruz
+        const commentCount = await Comment.countDocuments({ postId: post._id });
+
+        return {
+          id: post._id,
+          authorId: post.authorId._id,
+          userName: post.authorId.username,
+          userEmail: post.authorId.email,
+          userProfilePic: post.authorId.profilePicture,
+          content: post.content,
+          commentsCount: commentCount,
+          likes: post.likes,
+          date: post.createdAt,
+        };
+      })
+    );
+    res.status(200).json(postsWithCommentCount);
   } catch (error) {
     res.status(500).json({
       message: "Error fetching posts",
@@ -35,25 +34,30 @@ export const getAllPosts = async (req, res) => {
     });
   }
 };
-
 export const getUserPosts = async (req, res) => {
   try {
     const posts = await Post.find({ authorId: req.params.userId })
       .populate("authorId", "username email profilePicture")
       .sort({ createdAt: -1 });
 
-    const formattedPosts = posts.map((post) => ({
-      id: post._id,
-      userName: post.authorId.username,
-      userEmail: post.authorId.email,
-      userProfilePic: post.authorId.profilePicture,
-      content: post.content,
-      commentsCount: post.comments?.length || 0,
-      likesCount: post.likes?.length || 0,
-      date: post.createdAt,
-    }));
+    const postsWithCommentCount = await Promise.all(
+      posts.map(async (post) => {
+        const commentCount = await Comment.countDocuments({ postId: post._id });
 
-    res.status(200).json(formattedPosts);
+        return {
+          id: post._id,
+          userName: post.authorId.username,
+          userEmail: post.authorId.email,
+          userProfilePic: post.authorId.profilePicture,
+          content: post.content,
+          commentsCount: commentCount,
+          likes: post.likes,
+          date: post.createdAt,
+        };
+      })
+    );
+    res.status(200).json(postsWithCommentCount);
+
   } catch (error) {
     res.status(500).json({
       message: "Error fetching user posts",
@@ -87,10 +91,37 @@ export const createPost = async (req, res) => {
   }
 };
 
-export const likePost = async (req,res) => {
+export const toggleLike = async (req, res) => {
+  const { postId } = req.params;
+  const { userId } = req.body;
 
-}
+  try {
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
 
+    if (post.likes.includes(userId)) {
+      // Eğer kullanıcı postu beğenmişse, beğeniyi kaldır
+      post.likes = post.likes.filter(
+        (id) => id.toString() !== userId.toString()
+      );
+      await Post.updateOne({ _id: postId }, { $pull: { likes: userId } });
+      return res.status(200).json({ message: "Like removed", post });
+    } else {
+      // Eğer kullanıcı postu beğenmemişse, beğeniyi ekle
+      post.likes.push(userId);
+      await Post.updateOne({ _id: postId }, { $push: { likes: userId } });
+      return res.status(200).json({
+        message: "Like added",
+        postId: post._id,
+        likes: post.likes,
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: "Something went wrong", error });
+  }
+};
 
 export const addComment = async (req, res) => {
   const { postId, content, authorId } = req.body;
@@ -101,13 +132,11 @@ export const addComment = async (req, res) => {
     return res.status(400).json({ message: "Invalid ID format" });
   }
 
-  // Post kontrolü
   const post = await Post.findById(postId);
   if (!post) {
     return res.status(404).json({ message: "Post not found" });
   }
 
-  // Kullanıcı kontrolü
   const user = await User.findById(authorId);
   if (!user) {
     return res.status(404).json({ message: "User not found" });
@@ -121,13 +150,12 @@ export const addComment = async (req, res) => {
   });
 
   const savedComment = await newComment.save();
-
-  res.status(201).json(savedComment);
+  const populatedComment = await Comment.findById(savedComment._id).populate('authorId', 'username profilePicture');
+  res.status(201).json(populatedComment);
 };
 
 export const getPostComments = async (req, res) => {
   const { postId } = req.params;
-
   try {
     // postId'nin geçerli bir ObjectId olup olmadığını kontrol et
     if (!mongoose.Types.ObjectId.isValid(postId)) {
@@ -136,14 +164,29 @@ export const getPostComments = async (req, res) => {
 
     // Belirtilen postId'ye ait yorumları getir
     const comments = await Comment.find({ postId })
-      .populate("authorId", "username profilePicture") // Kullanıcı bilgilerini ekle
-      .sort({ createdAt: -1 }); // Yorumları en yeni tarihe göre sırala
+      .populate("authorId", "username profilePicture") 
+      .sort({ createdAt: -1 }); 
 
-    // Yorumları döndür
     res.status(200).json(comments);
   } catch (error) {
     res
       .status(500)
       .json({ message: "Failed to fetch comments", error: error.message });
+  }
+};
+
+export const getPost = async (req, res) => {
+  const {postId} = req.params;
+  try {
+    const post = await Post.findById(postId)
+    .populate("authorId", "username email profilePicture")
+    ;
+
+    res.status(200).json(post);
+  } catch (error) {
+    res.status(500).json({
+      message: "Error fetching  posts",
+      error: error.message,
+    });
   }
 };

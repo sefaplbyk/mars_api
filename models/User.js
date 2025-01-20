@@ -35,6 +35,7 @@ const userSchema = new mongoose.Schema(
       max: 150,
       default: "",
     },
+    isPrivate: { type: Boolean, default: false },
     postsCount: { type: Number, default: 0 },
     followersCount: { type: Number, default: 0 },
     followingCount: { type: Number, default: 0 },
@@ -42,7 +43,6 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Hash password before saving
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     next();

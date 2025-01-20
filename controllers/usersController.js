@@ -17,3 +17,16 @@ export const getUserById = async(req, res) => {
         res.status(500).json({ message: error.message });
     }
 }
+export const toggleUserPrivacy = async(req,res) => {
+    const {userId} = req.params
+    const {isPrivate} = req.body
+    try {
+        const user = await User.findByIdAndUpdate(userId, { isPrivate }, { new: true });
+        if (!user) {
+          return res.status(404).send({ message: 'Kullanıcı bulunamadı' });
+        }
+        res.send(user);
+      } catch (error) {
+        res.status(500).send({ message: 'Güncelleme işlemi başarısız', error });
+      }
+}
