@@ -34,7 +34,7 @@ export const getAllPosts = async (req, res) => {
     });
   }
 };
-export const getUserPosts = async (req, res) => {
+export const getLoggedInUserPosts = async (req, res) => {
   try {
     const posts = await Post.find({ authorId: req.params.userId })
       .populate("authorId", "username email profilePicture")
@@ -57,7 +57,6 @@ export const getUserPosts = async (req, res) => {
       })
     );
     res.status(200).json(postsWithCommentCount);
-
   } catch (error) {
     res.status(500).json({
       message: "Error fetching user posts",
@@ -81,6 +80,11 @@ export const createPost = async (req, res) => {
     });
 
     const savedPost = await post.save();
+
+    await User.findByIdAndUpdate(req.body.authorId, {
+      $inc: { postsCount: 1 },
+    });
+
     res.status(201).json(savedPost);
   } catch (error) {
     console.error("Post creation error:", error);
@@ -150,7 +154,10 @@ export const addComment = async (req, res) => {
   });
 
   const savedComment = await newComment.save();
-  const populatedComment = await Comment.findById(savedComment._id).populate('authorId', 'username profilePicture');
+  const populatedComment = await Comment.findById(savedComment._id).populate(
+    "authorId",
+    "username profilePicture"
+  );
   res.status(201).json(populatedComment);
 };
 
@@ -164,8 +171,8 @@ export const getPostComments = async (req, res) => {
 
     // Belirtilen postId'ye ait yorumları getir
     const comments = await Comment.find({ postId })
-      .populate("authorId", "username profilePicture") 
-      .sort({ createdAt: -1 }); 
+      .populate("authorId", "username profilePicture")
+      .sort({ createdAt: -1 });
 
     res.status(200).json(comments);
   } catch (error) {
@@ -176,12 +183,12 @@ export const getPostComments = async (req, res) => {
 };
 
 export const getPost = async (req, res) => {
-  const {postId} = req.params;
+  const { postId } = req.params;
   try {
-    const post = await Post.findById(postId)
-    .populate("authorId", "username email profilePicture")
-    ;
-
+    const post = await Post.findById(postId).populate(
+      "authorId",
+      "username email profilePicture"
+    );
     res.status(200).json(post);
   } catch (error) {
     res.status(500).json({

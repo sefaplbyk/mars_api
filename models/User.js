@@ -38,7 +38,7 @@ const userSchema = new mongoose.Schema(
     isPrivate: { type: Boolean, default: false },
     postsCount: { type: Number, default: 0 },
     followersCount: { type: Number, default: 0 },
-    followingCount: { type: Number, default: 0 },
+    followingsCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

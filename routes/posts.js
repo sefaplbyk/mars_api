@@ -2,7 +2,7 @@ import express from "express";
 import {
   createPost,
   getAllPosts,
-  getUserPosts,
+  getLoggedInUserPosts,
   addComment,
   getPostComments,
   toggleLike,
@@ -12,7 +12,7 @@ import {
 const router = express.Router();
 
 router.get("/all", getAllPosts);
-router.get("/:userId", getUserPosts);
+router.get("/:userId", getLoggedInUserPosts);
 router.get("/postDetail/:postId", getPost);
 router.get("/getPostComment/:postId", getPostComments);
 
