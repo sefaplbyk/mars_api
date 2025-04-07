@@ -20,6 +20,7 @@ export const getAllPosts = async (req, res) => {
           userEmail: post.authorId.email,
           userProfilePic: post.authorId.profilePicture,
           content: post.content,
+          imageUrl: post.imageUrl, 
           commentsCount: commentCount,
           likes: post.likes,
           date: post.createdAt,
@@ -50,6 +51,7 @@ export const getLoggedInUserPosts = async (req, res) => {
           userEmail: post.authorId.email,
           userProfilePic: post.authorId.profilePicture,
           content: post.content,
+          imageUrl: post.imageUrl, 
           commentsCount: commentCount,
           likes: post.likes,
           date: post.createdAt,
@@ -77,6 +79,7 @@ export const createPost = async (req, res) => {
       title: req.body.title,
       content: req.body.content,
       authorId: req.body.authorId,
+      imageUrl: req.body.imageUrl || "", 
     });
 
     const savedPost = await post.save();
