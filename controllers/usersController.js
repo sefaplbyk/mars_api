@@ -108,7 +108,7 @@ export const rq = async (req, res) => {
 export const getUserFollowers = async (req, res) => {
 
   const { userId } = req.params;
-    const user = User.findById(userId)
+  const user = User.findById(userId)
   try {
     const followers = await Follows.find()
       .populate
@@ -136,3 +136,25 @@ export const getUserFollowings = async (req, res) => {
     res.status(500).json({ error: "Followings could not be fetched." });
   }
 };
+
+export const updateUser = async (req, res) => {
+  const { userId } = req.params;
+  const { fullname, bio } = req.body;
+
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { fullname, bio },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+    }
+
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    console.error('Güncelleme hatası:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
+  }
+}
