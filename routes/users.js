@@ -6,17 +6,19 @@ import {
   getUserFollowings,
   rq,
   toggleUserPrivacy,
-  updateUser
+  updateUser,
+  unfollow
 } from "../controllers/usersController.js";
 
 const router = express.Router();
 
 router.put("/userPrivacy/:userId", toggleUserPrivacy);
-router.put("/profile/update/:userId", updateUser)
+router.put("/profile/update/:userId", updateUser);
+router.post("/unfollow", unfollow);
 router.get("/all/:userId", getAllUsers);
-router.get("/:id", getUserById);
 router.get("/profile/getUserPost", rq);
-router.get("/followers/:userId", getUserFollowers)
-router.get("/followings/:userId", getUserFollowings)
+router.get("/followers/:userId", getUserFollowers);
+router.get("/followings/:userId", getUserFollowings);
+router.get("/:id", getUserById);
 
 export default router;

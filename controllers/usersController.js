@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import Post from "../models/Post.js";
 import Follows from "../models/Followers.js";
 import Comment from "../models/Comment.js";
+
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find({ _id: { $ne: req.params.userId } });
@@ -106,17 +107,10 @@ export const rq = async (req, res) => {
 };
 
 export const getUserFollowers = async (req, res) => {
-
   const { userId } = req.params;
-  const user = User.findById(userId)
   try {
-    const followers = await Follows.find()
-      .populate
-      // "follower"
-      ();
-    console.log(followers, "followers");
-    const formattedFollowers = followers.map((item) => item.followers);
-    console.log(formattedFollowers, "followersApı");
+    const followers = await Follows.find({ following: userId }).populate("follower")
+    const formattedFollowers = followers.map((item) => item.follower);
     res.status(200).json(formattedFollowers);
   } catch (error) {
     res.status(500).json({ error: "Followers could not be fetched." });
@@ -158,3 +152,42 @@ export const updateUser = async (req, res) => {
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 }
+export const unfollow = async (req, res) => {
+  try {
+    const { followerId, followingId } = req.body;
+
+    if (!followerId || !followingId) {
+      return res.status(400).json({ message: "Eksik kullanıcı bilgisi." });
+    }
+
+    const deletedFollow = await Follows.findOneAndDelete({
+      follower: followerId,
+      following: followingId,
+    });
+
+    if (!deletedFollow) {
+      return res.status(404).json({ message: "Takip ilişkisi bulunamadı." });
+    }
+
+    const followerUser = await User.findByIdAndUpdate(
+      followerId,
+      { $inc: { followingsCount: -1 } },
+      { new: true }
+    );
+
+    const followingUser = await User.findByIdAndUpdate(
+      followingId,
+      { $inc: { followersCount: -1 } },
+      { new: true }
+    );
+
+    res.status(200).json({
+      message: "Takipten çıkıldı.",
+      followerUser,
+      followingUser,
+    });
+  } catch (error) {
+    console.error("Takipten çıkma hatası:", error);
+    res.status(500).json({ message: "Sunucu hatası." });
+  }
+};

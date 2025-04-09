@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import FollowRequest from "../models/FollowRequest.js";
 import Follow from "../models/Followers.js";
+import Follows from "../models/Followers.js";
 
 export const getFollowRequest = async (req, res) => {
   const { userId } = req.params;
@@ -75,13 +76,15 @@ export const sendFollowRequest = async (req, res) => {
       });
 
       await follow.save();
-      res.status(201).json({
-        requestInfo: "Kullanıcı takip edildi.",
-      });
       await User.findByIdAndUpdate(requesterId, {
         $inc: { followingsCount: 1 },
       });
       await User.findByIdAndUpdate(targetId, { $inc: { followersCount: 1 } });
+
+      res.status(201).json({
+        requestInfo: "Kullanıcı takip edildi.",
+      });
+
       console.log("User followed successfully");
     }
   } catch (error) {
@@ -102,6 +105,12 @@ export const acceptFollowRequest = async (req, res) => {
     request.status = "accepted";
     await request.save();
 
+
+    await Follows.create({
+      follower: request.requester,
+      following: request.target
+    })
+
     // Kullanıcıları takip listelerine ekle
     await User.findByIdAndUpdate(request.requester, {
       $inc: { followingsCount: 1 },
@@ -110,9 +119,11 @@ export const acceptFollowRequest = async (req, res) => {
       $inc: { followersCount: 1 },
     });
 
-    console.log("Follow request accepted");
+    console.log("Follow request accepted and follow relation created.");
+    res.status(200).json({ message: "Follow request accepted." });
   } catch (error) {
     console.error(error.message);
+    res.status(500).json({ error: "An error occurred while accepting request." });
   }
 };
 
@@ -135,6 +146,3 @@ export const declineFollowRequest = async (req, res) => {
     console.error(error.message);
   }
 };
-export const checkFollowRequest = async (req,res) => {
-  
-}
