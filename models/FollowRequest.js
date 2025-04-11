@@ -5,14 +5,11 @@ const followRequestSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true,
-  }, 
+  },
   target: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // İsteğin hedefi olan kullanıcı
-  status: {
-    type: String,
-    enum: ["pending", "accepted", "declined"],
-    default: "pending",
-  }, 
-  createdAt: { type: Date, default: Date.now }, 
+ 
+
+  createdAt: { type: Date, default: Date.now },
 });
 
 const FollowRequest = mongoose.model("FollowRequest", followRequestSchema);

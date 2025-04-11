@@ -8,7 +8,6 @@ export const getFollowRequest = async (req, res) => {
   try {
     const requests = await FollowRequest.find({
       target: userId,
-      status: "pending",
     })
       .populate({
         path: "requester",
@@ -27,7 +26,6 @@ export const getFollowRequest = async (req, res) => {
 };
 
 export const sendFollowRequest = async (req, res) => {
-  // requesterId, targetId
   const { requesterId, targetId } = req.body;
   try {
     const targetUser = await User.findById(targetId);
@@ -37,11 +35,9 @@ export const sendFollowRequest = async (req, res) => {
     }
 
     if (targetUser.isPrivate) {
-      // Gizli hesapsa, takip isteği oluştur
       const existingRequest = await FollowRequest.findOne({
         requester: requesterId,
         target: targetId,
-        status: "pending",
       });
 
       if (existingRequest) {
@@ -60,7 +56,6 @@ export const sendFollowRequest = async (req, res) => {
 
       console.log("Follow request sent");
     } else {
-      // Açık hesapsa, doğrudan takip et
       const existingFollow = await Follow.findOne({
         follower: requesterId,
         following: targetId,
@@ -95,23 +90,17 @@ export const sendFollowRequest = async (req, res) => {
 export const acceptFollowRequest = async (req, res) => {
   const { requestId } = req.params;
   try {
-    const request = await FollowRequest.findById(requestId);
+    const request = await FollowRequest.findByIdAndDelete(requestId);
 
-    if (!request || request.status !== "pending") {
+    if (!request) {
       throw new Error("Follow request not found or already handled");
     }
-
-    // İsteği kabul et
-    request.status = "accepted";
-    await request.save();
-
 
     await Follows.create({
       follower: request.requester,
       following: request.target
     })
 
-    // Kullanıcıları takip listelerine ekle
     await User.findByIdAndUpdate(request.requester, {
       $inc: { followingsCount: 1 },
     });
@@ -128,21 +117,70 @@ export const acceptFollowRequest = async (req, res) => {
 };
 
 export const declineFollowRequest = async (req, res) => {
-  // requestId
   const { requestId } = req.params;
 
   try {
-    const request = await FollowRequest.findByIdAndDelete(requestId);
+    const deletedRequest = await FollowRequest.findByIdAndDelete(requestId);
 
-    if (!request || request.status !== "pending") {
-      throw new Error("Follow request not found or already handled");
+    if (!deletedRequest) {
+      return res.status(404).json({
+        message: "Follow request not found or already handled.",
+      });
     }
 
-    request.status = "declined";
-    await request.save();
-
-    console.log("Follow request declined");
+    return res.status(200).json({ message: "Follow request declined and deleted." });
   } catch (error) {
-    console.error(error.message);
+    console.error("Error while declining follow request:", error);
+    return res.status(500).json({ error: "Internal server error." });
+  }
+};
+
+export const checkFollow = async (req, res) => {
+  const { requesterId, targetId } = req.body;
+
+  try {
+    const followRequest = await FollowRequest.findOne({
+      requester: requesterId,
+      target: targetId,
+    });
+
+    console.log("Follow request found:", followRequest);
+
+    if (followRequest) {
+      return res.status(200).json({
+        status: "pending",
+      });
+    } else {
+      return res.status(200).json({
+        status: null,
+      });
+    }
+  } catch (error) {
+    console.error("Takip durumu kontrol hatası:", error);
+    return res.status(500).json({ error: "Sunucu hatası" });
+  }
+};
+
+export const cancelFollowRequest = async (req, res) => {
+  const { requesterId, targetId } = req.body;
+
+  try {
+    const followRequest = await FollowRequest.findOneAndDelete({
+      requester: requesterId,
+      target: targetId,
+    });
+
+    if (followRequest) {
+      return res.status(200).json({
+        message: "Takip isteği başarıyla iptal edildi.",
+      });
+    } else {
+      return res.status(404).json({
+        error: "Takip isteği bulunamadı.",
+      });
+    }
+  } catch (error) {
+    console.error("Takip isteği iptal hatası:", error);
+    return res.status(500).json({ error: "Sunucu hatası" });
   }
 };
