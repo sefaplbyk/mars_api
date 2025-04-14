@@ -191,3 +191,20 @@ export const unfollow = async (req, res) => {
     res.status(500).json({ message: "Sunucu hatası." });
   }
 };
+export const getNotFollowedUsers = async (req, res) => {
+  try {
+    const myId = req.params.id;
+
+    const following = await Follows.find({ follower: myId }).select("following");
+
+    const followingIds = following.map((f) => f.following.toString());
+
+    const users = await User.find({
+      _id: { $nin: [...followingIds, myId] },
+    }).select("username email profilePicture");
+
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: "Bir hata oluştu" });
+  }
+};

@@ -7,7 +7,8 @@ import {
   rq,
   toggleUserPrivacy,
   updateUser,
-  unfollow
+  unfollow,
+  getNotFollowedUsers
 } from "../controllers/usersController.js";
 
 const router = express.Router();
@@ -20,5 +21,6 @@ router.get("/profile/getUserPost", rq);
 router.get("/followers/:userId", getUserFollowers);
 router.get("/followings/:userId", getUserFollowings);
 router.get("/:id", getUserById);
+router.get("/not-followed/:id",getNotFollowedUsers)
 
 export default router;
